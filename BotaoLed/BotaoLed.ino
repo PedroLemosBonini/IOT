@@ -8,6 +8,8 @@
 #define BOTAO_FISICO 26
 #define TRIG_PIN 12
 #define ECHO_PIN 14
+#define LED_AMARELO 25
+#define LED_VERDE 33
 
 // Configuração do ultrassonico
 #define MAX_DISTANCE 100
@@ -15,17 +17,18 @@ NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 
 // Configurações da rede WIFI
 #define WIFI_SSID "IIIII"
-#define WIFI_PASS "bonas231"
+#define WIFI_PASS "bonas222"
 
 // Autenticação Adafruit IO
-#define IO_USERNAME ""
-#define IO_KEY ""
+#define IO_USERNAME "pedrolemosbonini"
+#define IO_KEY "aio_BCCl49prhq7CZSWNNSOyVucAYwib"
 
 AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, WIFI_SSID, WIFI_PASS);
 
 // #define pinLed 14 //Pino do LED
 
 AdafruitIO_Feed *botaoalarme = io.feed("botaoalarme");
+AdafruitIO_Feed *distanciaultrassom = io.feed("distanciaultrassom");
 
 // Variáveis de controle
 bool alarmeAtivo = false;
@@ -41,12 +44,13 @@ void setup() {
 
   Serial.begin(115200);
 
-  while(!Serial);
+  while (!Serial)
+    ;
 
   Serial.print("Conectando ao Adafruit IO");
   io.connect();
 
-  while(io.status() < AIO_CONNECTED){
+  while (io.status() < AIO_CONNECTED) {
     Serial.print(".");
     delay(500);
   }
@@ -55,16 +59,15 @@ void setup() {
   Serial.println(io.statusText());
 
   // Vincula a função callback ao feed
-  botaoalarme -> onMessage(handleAlarme);
+  botaoalarme->onMessage(handleAlarme);
 
   Serial.println("Solicitando o estado inicial do alarme: ");
-  botaoalarme -> get();
+  botaoalarme->get();
 
   // Configuração do callack, quando o feed receber(atualizar) um valor
   //botaoled -> onMessage(handleBotaoLed);
   // Registra a função de callback
   // Ela será chamada sempre que o feed receber um novo dado
-
 }
 
 void loop() {
@@ -74,11 +77,11 @@ void loop() {
 
 
   // Leitura do botão físico
-  if(digitalRead(BOTAO_FISICO) == 1){
+  if (digitalRead(BOTAO_FISICO) == 1) {
     delay(200);
     alarmeAtivo = !alarmeAtivo;
 
-    botaoalarme -> save(String(alarmeAtivo ? "true" : "false"));
+    botaoalarme->save(String(alarmeAtivo ? "true" : "false"));
     Serial.println(alarmeAtivo ? "Alarme ARMADO pelo botao fisico" : "alarme DESARMADO pelo botao fisico");
   }
 
@@ -93,14 +96,17 @@ void loop() {
   Serial.print(distancia);
   Serial.println("cm");
 
-  // Ativação ou desativação do alarme
-  if(alarmeAtivo && distancia > 0 && distancia < LIMITE_DISTANCIA){
-    ativarAlerta();
+  if (distancia != 0) {
+    // Só envia distancias válidas
+    distanciaultrassom->save(distancia);
   }
-  else{
+
+  // Ativação ou desativação do alarme
+  if (alarmeAtivo && distancia > 0 && distancia < LIMITE_DISTANCIA) {
+    ativarAlerta();
+  } else {
     desligarAlerta();
   }
 
-  // delay(3000);
-
+  delay(3000);  //Intervalo ideal para a Adafruit
 }
